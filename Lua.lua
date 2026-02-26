@@ -1,43 +1,31 @@
 local Library = {}
 
--- [[ SERVISLER ]]
+-- Servisler
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
--- [[ AYARLAR ]]
+-- Eski GUI temizliği
+for _, gui in pairs(CoreGui:GetChildren()) do
+    if gui.Name == "PremiumHub_V4" then gui:Destroy() end
+end
+
 local HubVisible = true
 local ToggleKey = Enum.KeyCode.RightControl
+local UserIconID = "rbxassetid://16844605170"
 
--- Eski GUI'yi Temizle
-if CoreGui:FindFirstChild("PremiumHub_V4") then
-    CoreGui.PremiumHub_V4:Destroy()
-end
-
--- [[ YARDIMCI FONKSIYONLAR ]]
-local function MakeDraggable(gui)
-    local dragging, dragInput, dragStart, startPos
-    gui.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true; dragStart = input.Position; startPos = gui.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
+-- Executor ismini bulma fonksiyonu
+local function GetExecutorName()
+    local name = "Unknown"
+    pcall(function()
+        if identifyexecutor then
+            name = identifyexecutor()
         end
     end)
-    gui.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            gui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
+    return name
 end
 
--- [[ ANA KÜTÜPHANE FONKSİYONU ]]
 function Library:CreateWindow(hubName, bgId)
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "PremiumHub_V4"
@@ -45,6 +33,7 @@ function Library:CreateWindow(hubName, bgId)
     ScreenGui.ResetOnSpawn = false
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
+    -- ANA ÇERÇEVE
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
     MainFrame.Parent = ScreenGui
@@ -53,36 +42,102 @@ function Library:CreateWindow(hubName, bgId)
     MainFrame.Size = UDim2.new(0, 450, 0, 300)
     MainFrame.ClipsDescendants = true
     MainFrame.Visible = false
-    Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 16)
 
     -- Arkaplan Resmi
     local BackgroundImage = Instance.new("ImageLabel")
-    BackgroundImage.Name = "BackgroundImage"
     BackgroundImage.Parent = MainFrame
     BackgroundImage.Size = UDim2.new(1, 0, 1, 0)
-    BackgroundImage.Image = bgId or ""
+    BackgroundImage.BackgroundTransparency = 1
+    BackgroundImage.Image = bgId
     BackgroundImage.ScaleType = Enum.ScaleType.Crop
-    BackgroundImage.ImageTransparency = 0.5
     BackgroundImage.ZIndex = 0
-    Instance.new("UICorner", BackgroundImage).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", BackgroundImage).CornerRadius = UDim.new(0, 16)
 
-    -- Karartma (Glass Effect Sim)
-    local Overlay = Instance.new("Frame")
-    Overlay.Size = UDim2.new(1, 0, 1, 0)
-    Overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    Overlay.BackgroundTransparency = 0.3
-    Overlay.ZIndex = 1
-    Overlay.Parent = MainFrame
-    Instance.new("UICorner", Overlay).CornerRadius = UDim.new(0, 12)
+    local Glass = Instance.new("Frame")
+    Glass.Parent = MainFrame
+    Glass.Size = UDim2.new(1, 0, 1, 0)
+    Glass.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    Glass.BackgroundTransparency = 0.4
+    Glass.ZIndex = 1
+    Instance.new("UICorner", Glass).CornerRadius = UDim.new(0, 16)
 
-    -- Üst Panel
+    -- YÜKLEME EKRANI
+    local LoadingFrame = Instance.new("Frame")
+    LoadingFrame.Name = "LoadingFrame"
+    LoadingFrame.Parent = ScreenGui
+    LoadingFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    LoadingFrame.Size = UDim2.new(0, 250, 0, 100)
+    LoadingFrame.Position = UDim2.new(0.5, -125, 0.5, -50)
+    LoadingFrame.ClipsDescendants = true
+    Instance.new("UICorner", LoadingFrame).CornerRadius = UDim.new(0, 16)
+
+    local LoadBg = BackgroundImage:Clone()
+    LoadBg.Parent = LoadingFrame
+    local LoadGlass = Glass:Clone()
+    LoadGlass.Parent = LoadingFrame
+
+    local LoadTitle = Instance.new("TextLabel")
+    LoadTitle.Parent = LoadingFrame
+    LoadTitle.Size = UDim2.new(1, 0, 0, 30)
+    LoadTitle.Position = UDim2.new(0, 0, 0, 5)
+    LoadTitle.BackgroundTransparency = 1
+    LoadTitle.Text = hubName
+    LoadTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    LoadTitle.Font = Enum.Font.FredokaOne
+    LoadTitle.TextSize = 20
+    LoadTitle.ZIndex = 2
+
+    local StatusText = Instance.new("TextLabel")
+    StatusText.Parent = LoadingFrame
+    StatusText.Size = UDim2.new(1, 0, 0, 20)
+    StatusText.Position = UDim2.new(0, 0, 0, 45)
+    StatusText.BackgroundTransparency = 1
+    StatusText.Text = "Initializing..."
+    StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
+    StatusText.Font = Enum.Font.FredokaOne
+    StatusText.TextSize = 13
+    StatusText.ZIndex = 2
+
+    local BarBackground = Instance.new("Frame")
+    BarBackground.Parent = LoadingFrame
+    BarBackground.Size = UDim2.new(0.8, 0, 0, 6)
+    BarBackground.Position = UDim2.new(0.1, 0, 0, 75)
+    BarBackground.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    BarBackground.ZIndex = 2
+    Instance.new("UICorner", BarBackground).CornerRadius = UDim.new(1, 0)
+
+    local BarFill = Instance.new("Frame")
+    BarFill.Parent = BarBackground
+    BarFill.Size = UDim2.new(0, 0, 1, 0)
+    BarFill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    BarFill.ZIndex = 3
+    Instance.new("UICorner", BarFill).CornerRadius = UDim.new(1, 0)
+
+    task.spawn(function()
+        task.wait(0.5)
+        StatusText.Text = "Detecting Executor..."
+        TweenService:Create(BarFill, TweenInfo.new(1, Enum.EasingStyle.Quad), {Size = UDim2.new(0.3, 0, 1, 0)}):Play()
+        task.wait(1.2)
+        local execName = GetExecutorName()
+        StatusText.Text = execName .. " Executor"
+        TweenService:Create(BarFill, TweenInfo.new(1, Enum.EasingStyle.Quad), {Size = UDim2.new(0.7, 0, 1, 0)}):Play()
+        task.wait(1.2)
+        StatusText.Text = "Welcome..."
+        TweenService:Create(BarFill, TweenInfo.new(0.8, Enum.EasingStyle.Quad), {Size = UDim2.new(1, 0, 1, 0)}):Play()
+        task.wait(1)
+        TweenService:Create(LoadingFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = MainFrame.Size, Position = MainFrame.Position}):Play()
+        task.wait(0.6)
+        MainFrame.Visible = true
+        LoadingFrame:Destroy()
+    end)
+
+    -- TopBar
     local TopBar = Instance.new("Frame")
-    TopBar.Name = "TopBar"
     TopBar.Parent = MainFrame
     TopBar.Size = UDim2.new(1, 0, 0, 40)
     TopBar.BackgroundTransparency = 1
     TopBar.ZIndex = 5
-    MakeDraggable(MainFrame)
 
     local Title = Instance.new("TextLabel")
     Title.Parent = TopBar
@@ -96,18 +151,44 @@ function Library:CreateWindow(hubName, bgId)
     Title.TextXAlignment = Enum.TextXAlignment.Left
     Title.ZIndex = 6
 
-    -- Yan Menü (Tabs Container)
+    local ButtonsBox = Instance.new("Frame")
+    ButtonsBox.Parent = TopBar
+    ButtonsBox.Position = UDim2.new(1, -70, 0, 0)
+    ButtonsBox.Size = UDim2.new(0, 60, 1, 0)
+    ButtonsBox.BackgroundTransparency = 1
+    ButtonsBox.ZIndex = 6
+    local UIListLayout = Instance.new("UIListLayout", ButtonsBox)
+    UIListLayout.FillDirection = Enum.FillDirection.Horizontal
+    UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    UIListLayout.Padding = UDim.new(0, 5)
+
+    local MinBtn = Instance.new("TextButton")
+    MinBtn.Parent = ButtonsBox
+    MinBtn.Size = UDim2.new(0, 24, 0, 24)
+    MinBtn.BackgroundTransparency = 1
+    MinBtn.Text = "-"
+    MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MinBtn.Font = Enum.Font.FredokaOne
+    MinBtn.TextSize = 22
+
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Parent = ButtonsBox
+    CloseBtn.Size = UDim2.new(0, 24, 0, 24)
+    CloseBtn.BackgroundTransparency = 1
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseBtn.Font = Enum.Font.FredokaOne
+    CloseBtn.TextSize = 18
+
     local Sidebar = Instance.new("Frame")
-    Sidebar.Name = "Sidebar"
     Sidebar.Parent = MainFrame
     Sidebar.Position = UDim2.new(0, 10, 0, 50)
     Sidebar.Size = UDim2.new(0, 110, 1, -60)
     Sidebar.BackgroundTransparency = 1
     Sidebar.ZIndex = 5
-    local SidebarLayout = Instance.new("UIListLayout", Sidebar)
-    SidebarLayout.Padding = UDim.new(0, 5)
+    Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 5)
 
-    -- İçerik Alanı
     local Container = Instance.new("Frame")
     Container.Name = "Container"
     Container.Parent = MainFrame
@@ -116,30 +197,24 @@ function Library:CreateWindow(hubName, bgId)
     Container.BackgroundTransparency = 1
     Container.ZIndex = 5
 
-    -- Yükleme Animasyonu (Fake Loading)
-    task.spawn(function()
-        local LoadingLabel = Instance.new("TextLabel", ScreenGui)
-        LoadingLabel.Size = UDim2.new(0, 200, 0, 50)
-        LoadingLabel.Position = UDim2.new(0.5, -100, 0.5, -25)
-        LoadingLabel.Text = "Nortex Hub Loading..."
-        LoadingLabel.Font = Enum.Font.FredokaOne
-        LoadingLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        LoadingLabel.TextSize = 24
-        LoadingLabel.BackgroundTransparency = 1
-        
-        task.wait(1.5)
-        LoadingLabel:Destroy()
-        MainFrame.Visible = true
-        MainFrame:TweenSize(UDim2.new(0, 450, 0, 300), "Out", "Back", 0.5, true)
+    -- Dragging
+    local dragging, dragStart, startPos
+    TopBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = MainFrame.Position end
     end)
-
-    -- Menü Aç/Kapat (Global)
-    UserInputService.InputBegan:Connect(function(input, gpe)
-        if not gpe and input.KeyCode == ToggleKey then
-            HubVisible = not HubVisible
-            MainFrame.Visible = HubVisible
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
+    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+
+    MinBtn.MouseButton1Click:Connect(function()
+        local isMinimized = MainFrame.Size.Y.Offset < 100
+        TweenService:Create(MainFrame, TweenInfo.new(0.3), {Size = isMinimized and UDim2.new(0, 450, 0, 300) or UDim2.new(0, 450, 0, 40)}):Play()
+    end)
+    CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
     local Window = {}
 
@@ -147,13 +222,12 @@ function Library:CreateWindow(hubName, bgId)
         local TabBtn = Instance.new("TextButton")
         TabBtn.Parent = Sidebar
         TabBtn.Size = UDim2.new(1, 0, 0, 30)
-        TabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        TabBtn.BackgroundTransparency = 0.95
+        TabBtn.BackgroundTransparency = 1
         TabBtn.Text = tabName
-        TabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+        TabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
         TabBtn.Font = Enum.Font.FredokaOne
         TabBtn.TextSize = 14
-        Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
+        Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 8)
 
         local Page = Instance.new("ScrollingFrame")
         Page.Parent = Container
@@ -161,30 +235,23 @@ function Library:CreateWindow(hubName, bgId)
         Page.BackgroundTransparency = 1
         Page.Visible = false
         Page.ScrollBarThickness = 0
+        Page.CanvasSize = UDim2.new(0, 0, 0, 0)
         Page.AutomaticCanvasSize = Enum.AutomaticSize.Y
         local PageLayout = Instance.new("UIListLayout", Page)
-        PageLayout.Padding = UDim.new(0, 8)
+        PageLayout.Padding = UDim.new(0, 10)
         PageLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-        -- Sekme Geçişi
-        TabBtn.MouseButton1Click:Connect(function()
-            for _, v in pairs(Container:GetChildren()) do v.Visible = false end
-            for _, v in pairs(Sidebar:GetChildren()) do
-                if v:IsA("TextButton") then
-                    v.TextColor3 = Color3.fromRGB(180, 180, 180)
-                    v.BackgroundTransparency = 0.95
-                end
-            end
+        if #Sidebar:GetChildren() == 2 then 
             Page.Visible = true
             TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
             TabBtn.BackgroundTransparency = 0.85
-        end)
-
-        -- İlk Sekmeyi Aktif Et
-        if #Sidebar:GetChildren() == 2 then 
-            Page.Visible = true 
-            TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         end
+
+        TabBtn.MouseButton1Click:Connect(function()
+            for _, p in pairs(Container:GetChildren()) do if p:IsA("ScrollingFrame") then p.Visible = false end end
+            for _, b in pairs(Sidebar:GetChildren()) do if b:IsA("TextButton") then b.TextColor3 = Color3.fromRGB(150, 150, 150); b.BackgroundTransparency = 1 end end
+            Page.Visible = true; TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255); TabBtn.BackgroundTransparency = 0.85
+        end)
 
         local Elements = {}
 
@@ -194,121 +261,168 @@ function Library:CreateWindow(hubName, bgId)
             F.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
             F.BackgroundTransparency = 0.7
             F.Parent = Page
-            Instance.new("UICorner", F).CornerRadius = UDim.new(0, 8)
+            Instance.new("UICorner", F).CornerRadius = UDim.new(0, 10)
             return F
         end
 
+        -- LABEL EKLEME
         function Elements:AddLabel(text)
-            local F = CreateElementFrame(30)
-            local L = Instance.new("TextLabel")
-            L.Size = UDim2.new(1, -20, 1, 0)
-            L.Position = UDim2.new(0, 10, 0, 0)
-            L.BackgroundTransparency = 1
-            L.Text = text
-            L.TextColor3 = Color3.fromRGB(200, 200, 200)
-            L.Font = Enum.Font.FredokaOne
-            L.TextSize = 13
-            L.TextXAlignment = Enum.TextXAlignment.Left
-            L.Parent = F
+            local LblFrame = CreateElementFrame(30)
+            local Lbl = Instance.new("TextLabel")
+            Lbl.Size = UDim2.new(1, -20, 1, 0)
+            Lbl.Position = UDim2.new(0, 10, 0, 0)
+            Lbl.BackgroundTransparency = 1
+            Lbl.Text = text
+            Lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+            Lbl.Font = Enum.Font.FredokaOne
+            Lbl.TextSize = 14
+            Lbl.TextXAlignment = Enum.TextXAlignment.Left
+            Lbl.Parent = LblFrame
             
-            local LabelFuncs = {}
-            function LabelFuncs:SetText(newTxt) L.Text = newTxt end
-            return LabelFuncs
+            local LabelFunctions = {}
+            function LabelFunctions:SetText(newText) Lbl.Text = newText end
+            return LabelFunctions
+        end
+
+        -- KEYBIND EKLEME
+        function Elements:AddKeybind(text, default, callback)
+            local KbFrame = CreateElementFrame(40)
+            local binding = false
+            local currentKey = default.Name
+
+            local KbLabel = Instance.new("TextLabel")
+            KbLabel.Size = UDim2.new(0.7, 0, 1, 0)
+            KbLabel.Position = UDim2.new(0, 10, 0, 0)
+            KbLabel.Text = text
+            KbLabel.Font = Enum.Font.FredokaOne
+            KbLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            KbLabel.TextSize = 15
+            KbLabel.TextXAlignment = Enum.TextXAlignment.Left
+            KbLabel.BackgroundTransparency = 1
+            KbLabel.Parent = KbFrame
+
+            local KeyBox = Instance.new("TextButton")
+            KeyBox.Position = UDim2.new(1, -75, 0.5, -12)
+            KeyBox.Size = UDim2.new(0, 65, 0, 24)
+            KeyBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            KeyBox.Text = currentKey
+            KeyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+            KeyBox.Font = Enum.Font.FredokaOne
+            KeyBox.TextSize = 12
+            KeyBox.Parent = KbFrame
+            Instance.new("UICorner", KeyBox).CornerRadius = UDim.new(0, 6)
+
+            KeyBox.MouseButton1Click:Connect(function()
+                binding = true
+                KeyBox.Text = "..."
+                KeyBox.TextColor3 = Color3.fromRGB(255, 200, 0)
+            end)
+
+            UserInputService.InputBegan:Connect(function(input)
+                if binding and input.UserInputType == Enum.UserInputType.Keyboard then
+                    if input.KeyCode ~= Enum.KeyCode.Escape then
+                        currentKey = input.KeyCode.Name
+                        KeyBox.Text = currentKey
+                        callback(input.KeyCode)
+                    else
+                        KeyBox.Text = currentKey
+                    end
+                    binding = false
+                    KeyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+                end
+            end)
+        end
+
+        -- DİĞER ELEMENTLER (Dropdown, Button, Slider, Toggle)
+        function Elements:AddDropdown(text, callback)
+            local DropFrame = CreateElementFrame(40)
+            DropFrame.ClipsDescendants = true
+            local DropBtn = Instance.new("TextButton")
+            DropBtn.Size = UDim2.new(1, 0, 0, 40)
+            DropBtn.BackgroundTransparency = 1
+            DropBtn.Text = text .. "  ▼"
+            DropBtn.Font = Enum.Font.FredokaOne
+            DropBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            DropBtn.TextSize = 14
+            DropBtn.Parent = DropFrame
+            local ItemList = Instance.new("Frame")
+            ItemList.Position = UDim2.new(0, 0, 0, 40); ItemList.Size = UDim2.new(1, 0, 1, -40)
+            ItemList.BackgroundTransparency = 1; ItemList.Parent = DropFrame
+            Instance.new("UIListLayout", ItemList)
+
+            local open = false
+            DropBtn.MouseButton1Click:Connect(function()
+                open = not open
+                for _, v in pairs(ItemList:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+                for _, player in pairs(Players:GetPlayers()) do
+                    local pBtn = Instance.new("TextButton")
+                    pBtn.Size = UDim2.new(1, 0, 0, 25); pBtn.BackgroundTransparency = 1
+                    pBtn.Text = player.Name; pBtn.Font = Enum.Font.FredokaOne; pBtn.TextColor3 = Color3.fromRGB(200, 200, 200); pBtn.TextSize = 13; pBtn.Parent = ItemList
+                    pBtn.MouseButton1Click:Connect(function()
+                        DropBtn.Text = player.Name .. "  ▼"; callback(player.Name); open = false
+                        TweenService:Create(DropFrame, TweenInfo.new(0.3), {Size = UDim2.new(0.95, 0, 0, 40)}):Play()
+                    end)
+                end
+                local targetHeight = open and (#Players:GetPlayers() * 25 + 45) or 40
+                TweenService:Create(DropFrame, TweenInfo.new(0.3), {Size = UDim2.new(0.95, 0, 0, targetHeight)}):Play()
+            end)
         end
 
         function Elements:AddButton(text, callback)
-            local F = CreateElementFrame(35)
-            local B = Instance.new("TextButton")
-            B.Size = UDim2.new(1, 0, 1, 0)
-            B.BackgroundTransparency = 1
-            B.Text = text
-            B.TextColor3 = Color3.fromRGB(255, 255, 255)
-            B.Font = Enum.Font.FredokaOne
-            B.TextSize = 14
-            B.Parent = F
-            B.MouseButton1Click:Connect(function()
-                B.TextSize = 12
-                task.wait(0.1)
-                B.TextSize = 14
-                callback()
-            end)
-        end
-
-        function Elements:AddToggle(text, default, callback)
-            local F = CreateElementFrame(35)
-            local enabled = default
-            local L = Instance.new("TextLabel")
-            L.Size = UDim2.new(1, -50, 1, 0); L.Position = UDim2.new(0, 10, 0, 0); L.BackgroundTransparency = 1; L.Text = text; L.TextColor3 = Color3.fromRGB(255,255,255); L.Font = Enum.Font.FredokaOne; L.TextXAlignment = Enum.TextXAlignment.Left; L.Parent = F
-            
-            local Tgl = Instance.new("Frame")
-            Tgl.Size = UDim2.new(0, 35, 0, 18); Tgl.Position = UDim2.new(1, -45, 0.5, -9); Tgl.BackgroundColor3 = enabled and Color3.fromRGB(255,255,255) or Color3.fromRGB(40,40,40); Tgl.Parent = F; Instance.new("UICorner", Tgl).CornerRadius = UDim.new(1, 0)
-            
-            local Btn = Instance.new("TextButton")
-            Btn.Size = UDim2.new(1, 0, 1, 0); Btn.BackgroundTransparency = 1; Btn.Text = ""; Btn.Parent = F
-            Btn.MouseButton1Click:Connect(function()
-                enabled = not enabled
-                TweenService:Create(Tgl, TweenInfo.new(0.2), {BackgroundColor3 = enabled and Color3.fromRGB(255,255,255) or Color3.fromRGB(40,40,40)}):Play()
-                callback(enabled)
-            end)
+            local BtnFrame = CreateElementFrame(40)
+            local BtnLabel = Instance.new("TextLabel")
+            BtnLabel.Size = UDim2.new(0.7, 0, 1, 0); BtnLabel.Position = UDim2.new(0, 10, 0, 0); BtnLabel.Text = text
+            BtnLabel.Font = Enum.Font.FredokaOne; BtnLabel.TextColor3 = Color3.fromRGB(255, 255, 255); BtnLabel.TextSize = 15
+            BtnLabel.TextXAlignment = Enum.TextXAlignment.Left; BtnLabel.BackgroundTransparency = 1; BtnLabel.Parent = BtnFrame
+            local ClickIcon = Instance.new("ImageButton")
+            ClickIcon.Position = UDim2.new(1, -35, 0.5, -12.5); ClickIcon.Size = UDim2.new(0, 25, 0, 25)
+            ClickIcon.BackgroundTransparency = 1; ClickIcon.Image = UserIconID; ClickIcon.Parent = BtnFrame
+            ClickIcon.MouseButton1Click:Connect(function() callback() end)
         end
 
         function Elements:AddSlider(text, min, max, default, callback)
-            local F = CreateElementFrame(50)
-            local L = Instance.new("TextLabel")
-            L.Text = text; L.Size = UDim2.new(1, 0, 0, 20); L.Position = UDim2.new(0, 10, 0, 5); L.BackgroundTransparency = 1; L.TextColor3 = Color3.fromRGB(255,255,255); L.Font = Enum.Font.FredokaOne; L.TextXAlignment = Enum.TextXAlignment.Left; L.Parent = F
-            
-            local Bar = Instance.new("Frame")
-            Bar.Size = UDim2.new(0.9, 0, 0, 6); Bar.Position = UDim2.new(0.05, 0, 0.7, 0); Bar.BackgroundColor3 = Color3.fromRGB(30,30,30); Bar.Parent = F; Instance.new("UICorner", Bar)
-            
+            local SldFrame = CreateElementFrame(55)
+            local SldTitle = Instance.new("TextLabel")
+            SldTitle.Size = UDim2.new(1, 0, 0, 20); SldTitle.Position = UDim2.new(0, 10, 0, 5); SldTitle.Text = text
+            SldTitle.Font = Enum.Font.FredokaOne; SldTitle.TextColor3 = Color3.fromRGB(255, 255, 255); SldTitle.TextSize = 14
+            SldTitle.TextXAlignment = Enum.TextXAlignment.Left; SldTitle.BackgroundTransparency = 1; SldTitle.Parent = SldFrame
+            local BarBg = Instance.new("Frame")
+            BarBg.Position = UDim2.new(0, 10, 0, 30); BarBg.Size = UDim2.new(1, -20, 0, 15); BarBg.BackgroundColor3 = Color3.fromRGB(20, 20, 20); BarBg.ClipsDescendants = true; BarBg.Parent = SldFrame
+            Instance.new("UICorner", BarBg).CornerRadius = UDim.new(1, 0)
             local Fill = Instance.new("Frame")
-            Fill.Size = UDim2.new((default-min)/(max-min), 0, 1, 0); Fill.BackgroundColor3 = Color3.fromRGB(255,255,255); Fill.Parent = Bar; Instance.new("UICorner", Fill)
-            
-            local dragging = false
+            Fill.Size = UDim2.new((default-min)/(max-min), 0, 1, 0); Fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255); Fill.Parent = BarBg
+            Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
+            local ValLbl = Instance.new("TextLabel")
+            ValLbl.Size = UDim2.new(1, 0, 1, 0); ValLbl.BackgroundTransparency = 1; ValLbl.Text = tostring(default); ValLbl.TextColor3 = Color3.fromRGB(100, 100, 100); ValLbl.Font = Enum.Font.FredokaOne; ValLbl.TextSize = 12; ValLbl.Parent = BarBg
+            local draggingSld = false
             local function move(input)
-                local pos = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
-                Fill.Size = UDim2.new(pos, 0, 1, 0)
-                callback(math.floor(((max - min) * pos) + min))
+                local pos = math.clamp((input.Position.X - BarBg.AbsolutePosition.X) / BarBg.AbsoluteSize.X, 0, 1)
+                Fill.Size = UDim2.new(pos, 0, 1, 0); local val = math.floor(((max - min) * pos) + min); ValLbl.Text = tostring(val); callback(val)
             end
-            Bar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true move(input) end end)
-            UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
-            UserInputService.InputChanged:Connect(function(input) if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then move(input) end end)
+            BarBg.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSld = true move(input) end end)
+            UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSld = false end end)
+            UserInputService.InputChanged:Connect(function(input) if draggingSld and input.UserInputType == Enum.UserInputType.MouseMovement then move(input) end end)
         end
 
-        function Elements:AddDropdown(text, callback)
-            local F = CreateElementFrame(35)
-            local B = Instance.new("TextButton")
-            B.Size = UDim2.new(1, 0, 1, 0); B.BackgroundTransparency = 1; B.Text = text .. "  ▼"; B.TextColor3 = Color3.fromRGB(255,255,255); B.Font = Enum.Font.FredokaOne; B.Parent = F
-            
-            B.MouseButton1Click:Connect(function()
-                -- Basit dropdown mantığı: Listedeki ilk oyuncuyu seçer veya callback'i tetikler
-                callback("Refresh") 
-            end)
-        end
-
-        function Elements:AddKeybind(text, default, callback)
-            local F = CreateElementFrame(35)
-            local currentKey = default
-            local waiting = false
-            local L = Instance.new("TextLabel")
-            L.Size = UDim2.new(0.7, 0, 1, 0); L.Position = UDim2.new(0, 10, 0, 0); L.BackgroundTransparency = 1; L.Text = text; L.TextColor3 = Color3.fromRGB(255,255,255); L.Font = Enum.Font.FredokaOne; L.TextXAlignment = Enum.TextXAlignment.Left; L.Parent = F
-            
-            local KB = Instance.new("TextButton")
-            KB.Size = UDim2.new(0, 80, 0, 22); KB.Position = UDim2.new(1, -90, 0.5, -11); KB.BackgroundColor3 = Color3.fromRGB(30,30,30); KB.Text = currentKey.Name; KB.TextColor3 = Color3.fromRGB(255,255,255); KB.Font = Enum.Font.FredokaOne; KB.Parent = F; Instance.new("UICorner", KB)
-            
-            KB.MouseButton1Click:Connect(function()
-                waiting = true
-                KB.Text = "..."
-            end)
-            
-            UserInputService.InputBegan:Connect(function(input, gpe)
-                if waiting and input.UserInputType == Enum.UserInputType.Keyboard then
-                    currentKey = input.KeyCode
-                    KB.Text = input.KeyCode.Name
-                    waiting = false
-                    if currentKey == Enum.KeyCode.Escape then currentKey = default; KB.Text = default.Name end
-                elseif not gpe and input.KeyCode == currentKey then
-                    callback()
-                end
+        function Elements:AddToggle(text, default, callback)
+            local TglFrame = CreateElementFrame(40); local enabled = default
+            local TglLabel = Instance.new("TextLabel")
+            TglLabel.Size = UDim2.new(0.7, 0, 1, 0); TglLabel.Position = UDim2.new(0, 10, 0, 0); TglLabel.Text = text
+            TglLabel.Font = Enum.Font.FredokaOne; TglLabel.TextColor3 = Color3.fromRGB(255, 255, 255); TglLabel.TextSize = 15
+            TglLabel.TextXAlignment = Enum.TextXAlignment.Left; TglLabel.BackgroundTransparency = 1; TglLabel.Parent = TglFrame
+            local TglBox = Instance.new("Frame")
+            TglBox.Position = UDim2.new(1, -50, 0.5, -10); TglBox.Size = UDim2.new(0, 40, 0, 20); TglBox.BackgroundColor3 = enabled and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(40, 40, 40); TglBox.Parent = TglFrame
+            Instance.new("UICorner", TglBox).CornerRadius = UDim.new(1, 0)
+            local InnerCircle = Instance.new("Frame")
+            InnerCircle.Size = UDim2.new(0, 16, 0, 16); InnerCircle.Position = enabled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8); InnerCircle.BackgroundColor3 = enabled and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200); InnerCircle.Parent = TglBox
+            Instance.new("UICorner", InnerCircle).CornerRadius = UDim.new(1, 0)
+            local TglBtn = Instance.new("TextButton")
+            TglBtn.Size = UDim2.new(1, 0, 1, 0); TglBtn.BackgroundTransparency = 1; TglBtn.Text = ""; TglBtn.Parent = TglFrame
+            TglBtn.MouseButton1Click:Connect(function()
+                enabled = not enabled
+                TweenService:Create(TglBox, TweenInfo.new(0.2), {BackgroundColor3 = enabled and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(40, 40, 40)}):Play()
+                TweenService:Create(InnerCircle, TweenInfo.new(0.2), {Position = enabled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8), BackgroundColor3 = enabled and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)}):Play()
+                callback(enabled)
             end)
         end
 
