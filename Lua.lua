@@ -261,7 +261,8 @@ function Library:CreateWindow(hubName, bgId)
         PageLayout.Padding = UDim.new(0, 10)
         PageLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-        if #Sidebar:GetChildren() == 2 then 
+        -- Otomatik olarak ilk sekmeyi seçme mantığı
+        if #Sidebar:GetChildren() == 2 then -- İlk buton eklendiğinde (UIListLayout 1. çocuktur)
             Page.Visible = true
             TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
             TabBtn.BackgroundTransparency = 0.85
@@ -285,42 +286,25 @@ function Library:CreateWindow(hubName, bgId)
             return F
         end
 
-        -- YENİ: Düz Text Label
+        -- NEW: AddLabel Function
         function Elements:AddLabel(text)
-            local LabelFrame = CreateElementFrame(30)
-            local Lbl = Instance.new("TextLabel")
-            Lbl.Size = UDim2.new(1, -20, 1, 0)
-            Lbl.Position = UDim2.new(0, 10, 0, 0)
-            Lbl.BackgroundTransparency = 1
-            Lbl.Text = text
-            Lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
-            Lbl.Font = Enum.Font.FredokaOne
-            Lbl.TextSize = 14
-            Lbl.TextXAlignment = Enum.TextXAlignment.Left
-            Lbl.Parent = LabelFrame
-        end
+            local LabFrame = CreateElementFrame(30)
+            local LabText = Instance.new("TextLabel")
+            LabText.Size = UDim2.new(1, -20, 1, 0)
+            LabText.Position = UDim2.new(0, 10, 0, 0)
+            LabText.BackgroundTransparency = 1
+            LabText.Text = text
+            LabText.Font = Enum.Font.FredokaOne
+            LabText.TextColor3 = Color3.fromRGB(200, 200, 200)
+            LabText.TextSize = 13
+            LabText.TextXAlignment = Enum.TextXAlignment.Left
+            LabText.Parent = LabFrame
 
-        -- YENİ: İkonlu Text Label
-        function Elements:AddIconLabel(text, iconId)
-            local IconLabelFrame = CreateElementFrame(35)
-            
-            local Img = Instance.new("ImageLabel")
-            Img.Size = UDim2.new(0, 20, 0, 20)
-            Img.Position = UDim2.new(0, 10, 0.5, -10)
-            Img.BackgroundTransparency = 1
-            Img.Image = iconId or "rbxassetid://0"
-            Img.Parent = IconLabelFrame
-
-            local Lbl = Instance.new("TextLabel")
-            Lbl.Size = UDim2.new(1, -40, 1, 0)
-            Lbl.Position = UDim2.new(0, 38, 0, 0)
-            Lbl.BackgroundTransparency = 1
-            Lbl.Text = text
-            Lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-            Lbl.Font = Enum.Font.FredokaOne
-            Lbl.TextSize = 14
-            Lbl.TextXAlignment = Enum.TextXAlignment.Left
-            Lbl.Parent = IconLabelFrame
+            local LabelFunc = {}
+            function LabelFunc:SetText(newText)
+                LabText.Text = newText
+            end
+            return LabelFunc
         end
 
         function Elements:AddDropdown(text, callback)
