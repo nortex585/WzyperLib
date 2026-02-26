@@ -15,7 +15,15 @@ local HubVisible = true
 local ToggleKey = Enum.KeyCode.RightControl
 local UserIconID = "rbxassetid://16844605170"
 
--- Executor ismini bulma fonksiyonu
+-- Resim ID Düzenleyici (Eğer sadece sayı girilirse otomatik düzeltir)
+local function FixAssetID(id)
+    if type(id) == "number" or (type(id) == "string" and not id:find("rbxassetid://")) then
+        return "rbxassetid://" .. tostring(id)
+    end
+    return id
+end
+
+-- Executor ismini bulma
 local function GetExecutorName()
     local name = "Unknown"
     pcall(function()
@@ -44,25 +52,26 @@ function Library:CreateWindow(hubName, bgId)
     MainFrame.Visible = false
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 16)
 
-    -- Arkaplan Resmi ve Cam Efekti
+    -- ARKA PLAN RESMİ (DÜZELTİLDİ)
     local BackgroundImage = Instance.new("ImageLabel")
     BackgroundImage.Parent = MainFrame
     BackgroundImage.Size = UDim2.new(1, 0, 1, 0)
     BackgroundImage.BackgroundTransparency = 1
-    BackgroundImage.Image = bgId
+    BackgroundImage.Image = FixAssetID(bgId) -- Otomatik düzeltme burada
     BackgroundImage.ScaleType = Enum.ScaleType.Crop
     BackgroundImage.ZIndex = 0
     Instance.new("UICorner", BackgroundImage).CornerRadius = UDim.new(0, 16)
 
+    -- CAM EFEKTİ (Resmin görünmesi için transparanlık ayarlandı)
     local Glass = Instance.new("Frame")
     Glass.Parent = MainFrame
     Glass.Size = UDim2.new(1, 0, 1, 0)
     Glass.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    Glass.BackgroundTransparency = 0.4
+    Glass.BackgroundTransparency = 0.6 -- Resim daha belirgin olsun diye 0.6 yapıldı
     Glass.ZIndex = 1
     Instance.new("UICorner", Glass).CornerRadius = UDim.new(0, 16)
 
-    -- YÜKLEME EKRANI (Animasyon)
+    -- YÜKLEME EKRANI
     local LoadingFrame = Instance.new("Frame")
     LoadingFrame.Name = "LoadingFrame"
     LoadingFrame.Parent = ScreenGui
@@ -117,23 +126,17 @@ function Library:CreateWindow(hubName, bgId)
     task.spawn(function()
         task.wait(0.5)
         StatusText.Text = "Detecting Executor..."
-        TweenService:Create(BarFill, TweenInfo.new(1, Enum.EasingStyle.Quad), {Size = UDim2.new(0.3, 0, 1, 0)}):Play()
+        TweenService:Create(BarFill, TweenInfo.new(1, Enum.EasingStyle.Linear), {Size = UDim2.new(0.3, 0, 1, 0)}):Play()
         task.wait(1.2)
         
         local execName = GetExecutorName()
         StatusText.Text = execName .. " Executor"
-        TweenService:Create(BarFill, TweenInfo.new(1, Enum.EasingStyle.Quad), {Size = UDim2.new(0.7, 0, 1, 0)}):Play()
+        TweenService:Create(BarFill, TweenInfo.new(1, Enum.EasingStyle.Linear), {Size = UDim2.new(0.7, 0, 1, 0)}):Play()
         task.wait(1.2)
         
         StatusText.Text = "Welcome..."
-        TweenService:Create(BarFill, TweenInfo.new(0.8, Enum.EasingStyle.Quad), {Size = UDim2.new(1, 0, 1, 0)}):Play()
+        TweenService:Create(BarFill, TweenInfo.new(0.8, Enum.EasingStyle.Linear), {Size = UDim2.new(1, 0, 1, 0)}):Play()
         task.wait(1)
-
-        TweenService:Create(LoadTitle, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
-        TweenService:Create(StatusText, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
-        TweenService:Create(BarBackground, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
-        TweenService:Create(BarFill, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
-        task.wait(0.3)
 
         local morphTween = TweenService:Create(LoadingFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
             Size = MainFrame.Size,
@@ -146,7 +149,7 @@ function Library:CreateWindow(hubName, bgId)
         LoadingFrame:Destroy()
     end)
 
-    -- TopBar & Butonlar
+    -- TOPBAR
     local TopBar = Instance.new("Frame")
     TopBar.Parent = MainFrame
     TopBar.Size = UDim2.new(1, 0, 0, 40)
@@ -213,7 +216,7 @@ function Library:CreateWindow(hubName, bgId)
     Container.BackgroundTransparency = 1
     Container.ZIndex = 5
 
-    -- Sürükleme (Drag) İşlemleri
+    -- Drag & Drop
     local dragging, dragStart, startPos
     TopBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -233,8 +236,13 @@ function Library:CreateWindow(hubName, bgId)
         isMinimized = not isMinimized
         TweenService:Create(MainFrame, TweenInfo.new(0.3), {Size = isMinimized and UDim2.new(0, 450, 0, 40) or UDim2.new(0, 450, 0, 300)}):Play()
     end)
-    CloseBtn.MouseButton1Click:Connect(function() HubVisible = false; MainFrame.Visible = false end)
-    UserInputService.InputBegan:Connect(function(input, gpe) if not gpe and input.KeyCode == ToggleKey then HubVisible = not HubVisible; MainFrame.Visible = HubVisible end end)
+    CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+    
+    UserInputService.InputBegan:Connect(function(input, gpe) 
+        if not gpe and input.KeyCode == ToggleKey then 
+            HubVisible = not HubVisible; MainFrame.Visible = HubVisible 
+        end 
+    end)
 
     local Window = {}
     
@@ -261,8 +269,7 @@ function Library:CreateWindow(hubName, bgId)
         PageLayout.Padding = UDim.new(0, 10)
         PageLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-        -- Otomatik olarak ilk sekmeyi seçme mantığı
-        if #Sidebar:GetChildren() == 2 then -- İlk buton eklendiğinde (UIListLayout 1. çocuktur)
+        if #Sidebar:GetChildren() == 2 then 
             Page.Visible = true
             TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
             TabBtn.BackgroundTransparency = 0.85
@@ -286,7 +293,6 @@ function Library:CreateWindow(hubName, bgId)
             return F
         end
 
-        -- NEW: AddLabel Function
         function Elements:AddLabel(text)
             local LabFrame = CreateElementFrame(30)
             local LabText = Instance.new("TextLabel")
@@ -299,12 +305,105 @@ function Library:CreateWindow(hubName, bgId)
             LabText.TextSize = 13
             LabText.TextXAlignment = Enum.TextXAlignment.Left
             LabText.Parent = LabFrame
-
             local LabelFunc = {}
-            function LabelFunc:SetText(newText)
-                LabText.Text = newText
-            end
+            function LabelFunc:SetText(newText) LabText.Text = newText end
             return LabelFunc
+        end
+
+        function Elements:AddButton(text, callback)
+            local BtnFrame = CreateElementFrame(40)
+            local BtnBtn = Instance.new("TextButton")
+            BtnBtn.Size = UDim2.new(1, 0, 1, 0)
+            BtnBtn.BackgroundTransparency = 1
+            BtnBtn.Text = text
+            BtnBtn.Font = Enum.Font.FredokaOne
+            BtnBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            BtnBtn.TextSize = 15
+            BtnBtn.Parent = BtnFrame
+            BtnBtn.MouseButton1Click:Connect(callback)
+        end
+
+        function Elements:AddToggle(text, default, callback)
+            local TglFrame = CreateElementFrame(40)
+            local enabled = default
+            local TglLabel = Instance.new("TextLabel")
+            TglLabel.Size = UDim2.new(0.7, 0, 1, 0)
+            TglLabel.Position = UDim2.new(0, 10, 0, 0)
+            TglLabel.Text = text
+            TglLabel.Font = Enum.Font.FredokaOne
+            TglLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            TglLabel.TextSize = 15
+            TglLabel.TextXAlignment = Enum.TextXAlignment.Left
+            TglLabel.BackgroundTransparency = 1
+            TglLabel.Parent = TglFrame
+            local TglBox = Instance.new("Frame")
+            TglBox.Position = UDim2.new(1, -50, 0.5, -10)
+            TglBox.Size = UDim2.new(0, 40, 0, 20)
+            TglBox.BackgroundColor3 = enabled and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(40, 40, 40)
+            TglBox.Parent = TglFrame
+            Instance.new("UICorner", TglBox).CornerRadius = UDim.new(1, 0)
+            local InnerCircle = Instance.new("Frame")
+            InnerCircle.Size = UDim2.new(0, 16, 0, 16)
+            InnerCircle.Position = enabled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+            InnerCircle.BackgroundColor3 = enabled and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
+            InnerCircle.Parent = TglBox
+            Instance.new("UICorner", InnerCircle).CornerRadius = UDim.new(1, 0)
+            local TglBtn = Instance.new("TextButton")
+            TglBtn.Size = UDim2.new(1, 0, 1, 0)
+            TglBtn.BackgroundTransparency = 1
+            TglBtn.Text = ""
+            TglBtn.Parent = TglFrame
+            TglBtn.MouseButton1Click:Connect(function()
+                enabled = not enabled
+                TweenService:Create(TglBox, TweenInfo.new(0.2), {BackgroundColor3 = enabled and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(40, 40, 40)}):Play()
+                TweenService:Create(InnerCircle, TweenInfo.new(0.2), {Position = enabled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8), BackgroundColor3 = enabled and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)}):Play()
+                callback(enabled)
+            end)
+        end
+
+        function Elements:AddSlider(text, min, max, default, callback)
+            local SldFrame = CreateElementFrame(55)
+            local SldTitle = Instance.new("TextLabel")
+            SldTitle.Size = UDim2.new(1, 0, 0, 20)
+            SldTitle.Position = UDim2.new(0, 10, 0, 5)
+            SldTitle.Text = text
+            SldTitle.Font = Enum.Font.FredokaOne
+            SldTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+            SldTitle.TextSize = 14
+            SldTitle.TextXAlignment = Enum.TextXAlignment.Left
+            SldTitle.BackgroundTransparency = 1
+            SldTitle.Parent = SldFrame
+            local BarBg = Instance.new("Frame")
+            BarBg.Position = UDim2.new(0, 10, 0, 30)
+            BarBg.Size = UDim2.new(1, -20, 0, 15)
+            BarBg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+            BarBg.ClipsDescendants = true
+            BarBg.Parent = SldFrame
+            Instance.new("UICorner", BarBg).CornerRadius = UDim.new(1, 0)
+            local Fill = Instance.new("Frame")
+            Fill.Size = UDim2.new((default-min)/(max-min), 0, 1, 0)
+            Fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Fill.Parent = BarBg
+            Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
+            local ValLbl = Instance.new("TextLabel")
+            ValLbl.Size = UDim2.new(1, 0, 1, 0)
+            ValLbl.BackgroundTransparency = 1
+            ValLbl.Text = tostring(default)
+            ValLbl.TextColor3 = Color3.fromRGB(100, 100, 100)
+            ValLbl.Font = Enum.Font.FredokaOne
+            ValLbl.TextSize = 12
+            ValLbl.Parent = BarBg
+            local draggingSld = false
+            local function move(input)
+                local pos = math.clamp((input.Position.X - BarBg.AbsolutePosition.X) / BarBg.AbsoluteSize.X, 0, 1)
+                Fill.Size = UDim2.new(pos, 0, 1, 0)
+                local val = math.floor(((max - min) * pos) + min)
+                ValLbl.Text = tostring(val)
+                callback(val)
+            end
+            BarBg.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSld = true move(input) end end)
+            UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSld = false end end)
+            UserInputService.InputChanged:Connect(function(input) if draggingSld and input.UserInputType == Enum.UserInputType.MouseMovement then move(input) end end)
         end
 
         function Elements:AddDropdown(text, callback)
@@ -324,7 +423,6 @@ function Library:CreateWindow(hubName, bgId)
             ItemList.BackgroundTransparency = 1
             ItemList.Parent = DropFrame
             Instance.new("UIListLayout", ItemList)
-
             local open = false
             DropBtn.MouseButton1Click:Connect(function()
                 open = not open
@@ -347,129 +445,6 @@ function Library:CreateWindow(hubName, bgId)
                 end
                 local targetHeight = open and (#Players:GetPlayers() * 25 + 45) or 40
                 TweenService:Create(DropFrame, TweenInfo.new(0.3), {Size = UDim2.new(0.95, 0, 0, targetHeight)}):Play()
-            end)
-        end
-
-        function Elements:AddButton(text, callback)
-            local BtnFrame = CreateElementFrame(40)
-            local BtnLabel = Instance.new("TextLabel")
-            BtnLabel.Size = UDim2.new(0.7, 0, 1, 0)
-            BtnLabel.Position = UDim2.new(0, 10, 0, 0)
-            BtnLabel.Text = text
-            BtnLabel.Font = Enum.Font.FredokaOne
-            BtnLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            BtnLabel.TextSize = 15
-            BtnLabel.TextXAlignment = Enum.TextXAlignment.Left
-            BtnLabel.BackgroundTransparency = 1
-            BtnLabel.Parent = BtnFrame
-            
-            local ClickIcon = Instance.new("ImageButton")
-            ClickIcon.Position = UDim2.new(1, -35, 0.5, -12.5)
-            ClickIcon.Size = UDim2.new(0, 25, 0, 25)
-            ClickIcon.BackgroundTransparency = 1
-            ClickIcon.Image = UserIconID
-            ClickIcon.Parent = BtnFrame
-            
-            ClickIcon.MouseButton1Click:Connect(function()
-                 TweenService:Create(ClickIcon, TweenInfo.new(0.1), {ImageColor3 = Color3.fromRGB(150,150,150)}):Play()
-                 task.wait(0.1)
-                 TweenService:Create(ClickIcon, TweenInfo.new(0.1), {ImageColor3 = Color3.fromRGB(255,255,255)}):Play()
-                 callback()
-            end)
-        end
-
-        function Elements:AddSlider(text, min, max, default, callback)
-            local SldFrame = CreateElementFrame(55)
-            local SldTitle = Instance.new("TextLabel")
-            SldTitle.Size = UDim2.new(1, 0, 0, 20)
-            SldTitle.Position = UDim2.new(0, 10, 0, 5)
-            SldTitle.Text = text
-            SldTitle.Font = Enum.Font.FredokaOne
-            SldTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-            SldTitle.TextSize = 14
-            SldTitle.TextXAlignment = Enum.TextXAlignment.Left
-            SldTitle.BackgroundTransparency = 1
-            SldTitle.Parent = SldFrame
-
-            local BarBg = Instance.new("Frame")
-            BarBg.Position = UDim2.new(0, 10, 0, 30)
-            BarBg.Size = UDim2.new(1, -20, 0, 15)
-            BarBg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-            BarBg.ClipsDescendants = true
-            BarBg.Parent = SldFrame
-            Instance.new("UICorner", BarBg).CornerRadius = UDim.new(1, 0)
-
-            local Fill = Instance.new("Frame")
-            Fill.Size = UDim2.new((default-min)/(max-min), 0, 1, 0)
-            Fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            Fill.Parent = BarBg
-            Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
-            
-            local ValLbl = Instance.new("TextLabel")
-            ValLbl.Size = UDim2.new(1, 0, 1, 0)
-            ValLbl.BackgroundTransparency = 1
-            ValLbl.Text = tostring(default)
-            ValLbl.TextColor3 = Color3.fromRGB(100, 100, 100)
-            ValLbl.Font = Enum.Font.FredokaOne
-            ValLbl.TextSize = 12
-            ValLbl.Parent = BarBg
-
-            local draggingSld = false
-            local function move(input)
-                local pos = math.clamp((input.Position.X - BarBg.AbsolutePosition.X) / BarBg.AbsoluteSize.X, 0, 1)
-                Fill.Size = UDim2.new(pos, 0, 1, 0)
-                local val = math.floor(((max - min) * pos) + min)
-                ValLbl.Text = tostring(val)
-                callback(val)
-            end
-            BarBg.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSld = true move(input) end end)
-            UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSld = false end end)
-            UserInputService.InputChanged:Connect(function(input) if draggingSld and input.UserInputType == Enum.UserInputType.MouseMovement then move(input) end end)
-        end
-
-        function Elements:AddToggle(text, default, callback)
-            local TglFrame = CreateElementFrame(40)
-            local enabled = default
-
-            local TglLabel = Instance.new("TextLabel")
-            TglLabel.Size = UDim2.new(0.7, 0, 1, 0)
-            TglLabel.Position = UDim2.new(0, 10, 0, 0)
-            TglLabel.Text = text
-            TglLabel.Font = Enum.Font.FredokaOne
-            TglLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            TglLabel.TextSize = 15
-            TglLabel.TextXAlignment = Enum.TextXAlignment.Left
-            TglLabel.BackgroundTransparency = 1
-            TglLabel.Parent = TglFrame
-
-            local TglBox = Instance.new("Frame")
-            TglBox.Position = UDim2.new(1, -50, 0.5, -10)
-            TglBox.Size = UDim2.new(0, 40, 0, 20)
-            TglBox.BackgroundColor3 = enabled and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(40, 40, 40)
-            TglBox.Parent = TglFrame
-            Instance.new("UICorner", TglBox).CornerRadius = UDim.new(1, 0)
-
-            local InnerCircle = Instance.new("Frame")
-            InnerCircle.Size = UDim2.new(0, 16, 0, 16)
-            InnerCircle.Position = enabled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
-            InnerCircle.BackgroundColor3 = enabled and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
-            InnerCircle.Parent = TglBox
-            Instance.new("UICorner", InnerCircle).CornerRadius = UDim.new(1, 0)
-
-            local TglBtn = Instance.new("TextButton")
-            TglBtn.Size = UDim2.new(1, 0, 1, 0)
-            TglBtn.BackgroundTransparency = 1
-            TglBtn.Text = ""
-            TglBtn.Parent = TglFrame
-
-            TglBtn.MouseButton1Click:Connect(function()
-                enabled = not enabled
-                TweenService:Create(TglBox, TweenInfo.new(0.2), {BackgroundColor3 = enabled and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(40, 40, 40)}):Play()
-                TweenService:Create(InnerCircle, TweenInfo.new(0.2), {
-                    Position = enabled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
-                    BackgroundColor3 = enabled and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
-                }):Play()
-                callback(enabled)
             end)
         end
 
